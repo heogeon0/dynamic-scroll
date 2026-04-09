@@ -1,0 +1,23 @@
+{
+  "name": "dynamic-scroll",
+  "private": true,
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "clean": "turbo clean",
+    "commit": "git-cz"
+  },
+  "config": {
+    "commitizen": {
+      "path": "node_modules/cz-git",
+      "czConfig": "./cz.config.ts"
+    }
+  },
+  "devDependencies": {
+    "commitizen": "^4.3.1",
+    "cz-git": "^1.12.0",
+    "turbo": "^2"
+  },
+  "packageManager": "pnpm@9.15.1"
+}
