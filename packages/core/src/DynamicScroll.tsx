@@ -1,10 +1,11 @@
-import { forwardRef, useMemo, useRef, useState } from "react";
+import { forwardRef, useMemo, useRef } from "react";
 import type {
   DynamicScrollHandle,
   DynamicScrollProps,
   VirtualScrollItem,
 } from "./types";
 import { useHeightMap } from "./hooks/useHeightMap";
+import { usePositions } from "./hooks/usePositions";
 import { useGroupPositions } from "./hooks/useGroupPositions";
 import { VirtualScroll } from "./components/VirtualScroll";
 import { InitialMeasure } from "./components/InitialMeasure";
@@ -34,6 +35,7 @@ function DynamicScrollInner<T extends VirtualScrollItem>(
     style,
     groupBy,
     renderGroupHeader,
+    loadingComponent,
   }: DynamicScrollProps<T>,
   ref: React.ForwardedRef<DynamicScrollHandle>,
 ) {
@@ -55,24 +57,23 @@ function DynamicScrollInner<T extends VirtualScrollItem>(
   // 현재 측정 중인지 (초기 이후 새 아이템 추가 시)
   const isMeasuring = !isAllMeasured && hasEverMeasuredRef.current;
 
-  // childPositions 계산
-  const childPositions = useMemo(() => {
-    const positions = [0];
-    for (let i = 0; i < items.length; i++) {
-      const height =
-        heightMapRef.current.get(items[i].id) ?? estimatedItemSize ?? 0;
-      positions.push(positions[i] + height);
-    }
-    return positions;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [items, version, estimatedItemSize]);
 
-  const totalHeight =
-    childPositions.length > 1
-      ? childPositions[childPositions.length - 1]
-      : 0;
 
-  const groupInfo = useGroupPositions(items, groupBy, heightMapRef, version);
+  // 측정 중에는 이전에 확정된 아이템 목록을 유지 (높이 0 아이템이 VirtualScroll에 노출되는 것 방지)
+  const stableItemsRef = useRef(items);
+  if (!isMeasuring) {
+    stableItemsRef.current = items;
+  }
+  const stableItems = isMeasuring ? stableItemsRef.current : items;
+
+  const { childPositions, totalHeight } = usePositions({
+    items: stableItems,
+    heightMapRef,
+    version,
+    estimatedItemSize,
+  });
+
+  const groupInfo = useGroupPositions(stableItems, groupBy, heightMapRef, version);
 
   // 그룹 헤더 래핑
   const wrappedRenderItem = useMemo(() => {
@@ -93,6 +94,29 @@ function DynamicScrollInner<T extends VirtualScrollItem>(
     };
   }, [groupBy, renderGroupHeader, groupInfo, renderItem]);
 
+  /**
+   * InitialMeasure용 렌더 함수.
+   * 그룹 헤더가 있으면 그룹 시작 아이템에 헤더를 포함하여 측정한다.
+   * (런타임 Measure와 동일한 높이가 측정되도록)
+   */
+  const measureRenderItem = useMemo(() => {
+    if (!groupBy || !renderGroupHeader) return renderItem;
+
+    return (item: T, index: number) => {
+      const currentGroup = groupBy(item);
+      const prevItem = index > 0 ? items[index - 1] : null;
+      const prevGroup = prevItem ? groupBy(prevItem) : null;
+      const isGroupStart = currentGroup !== prevGroup;
+
+      return (
+        <>
+          {isGroupStart && renderGroupHeader(currentGroup)}
+          {renderItem(item, index)}
+        </>
+      );
+    };
+  }, [groupBy, renderGroupHeader, renderItem, items]);
+
   // 초기 측정이 완료되지 않았으면 측정 영역만 렌더링
   if (!hasEverMeasuredRef.current) {
     return (
@@ -109,7 +133,7 @@ function DynamicScrollInner<T extends VirtualScrollItem>(
           if (index === -1) return null;
           return (
             <InitialMeasure key={id} itemId={id} onMeasured={onItemMeasured}>
-              {renderItem(items[index], index)}
+              {measureRenderItem(items[index], index)}
             </InitialMeasure>
           );
         })}
@@ -138,7 +162,7 @@ function DynamicScrollInner<T extends VirtualScrollItem>(
             if (index === -1) return null;
             return (
               <InitialMeasure key={id} itemId={id} onMeasured={onItemMeasured}>
-                {renderItem(items[index], index)}
+                {measureRenderItem(items[index], index)}
               </InitialMeasure>
             );
           })}
@@ -146,7 +170,7 @@ function DynamicScrollInner<T extends VirtualScrollItem>(
       )}
       <VirtualScroll
         ref={ref}
-        items={items}
+        items={stableItems}
         renderItem={wrappedRenderItem}
         childPositions={childPositions}
         totalHeight={totalHeight}
@@ -160,6 +184,8 @@ function DynamicScrollInner<T extends VirtualScrollItem>(
         syncScrollUpdates={syncScrollUpdates}
         className={className}
         style={style}
+        isMeasuring={isMeasuring}
+        loadingComponent={loadingComponent}
       />
     </>
   );

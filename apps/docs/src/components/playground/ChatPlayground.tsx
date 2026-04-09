@@ -107,9 +107,9 @@ export function ChatPlayground() {
   /** 위로 스크롤 → 이전 메시지 로드 */
   const handleStartReached = useCallback(async () => {
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
+    await new Promise((r) => setTimeout(r, 500));
     const oldestDate = messages[0]?.date ?? new Date().toISOString().split("T")[0];
-    const older = generateOlderMessages(20, oldestDate);
+    const older = generateOlderMessages(40, oldestDate);
     setMessages((prev) => [...older, ...prev]);
     setLoading(false);
   }, [messages]);
@@ -238,6 +238,15 @@ export function ChatPlayground() {
             onStartReached={handleStartReached}
             overscanCount={20}
             onAtBottomChange={setIsAtBottom}
+            loadingComponent={loading ? (
+              <div className="flex items-center justify-center py-4 text-muted-foreground text-xs gap-2">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                이전 메시지 불러오는 중...
+              </div>
+            ) : null}
           />}
         </CardContent>
 

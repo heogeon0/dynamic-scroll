@@ -73,6 +73,8 @@ export interface DynamicScrollProps<T extends VirtualScrollItem> {
   groupBy?: (item: T) => string;
   /** 그룹 헤더 렌더링 함수 */
   renderGroupHeader?: (groupKey: string) => ReactNode;
+  /** 상단 로딩 중 표시할 컴포넌트 */
+  loadingComponent?: ReactNode;
 }
 
 /**
@@ -108,4 +110,8 @@ export interface VirtualScrollProps<T extends VirtualScrollItem> {
   className?: string;
   /** 스크롤 컨테이너에 적용할 style */
   style?: React.CSSProperties;
+  /** 백그라운드 측정 진행 중 여부 (DynamicScroll 내부용) */
+  isMeasuring?: boolean;
+  /** 상단 로딩 중 표시할 컴포넌트 */
+  loadingComponent?: ReactNode;
 }

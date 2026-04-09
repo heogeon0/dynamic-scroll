@@ -37,6 +37,8 @@ function VirtualScrollInner<T extends VirtualScrollItem>(
     syncScrollUpdates = false,
     className,
     style,
+    isMeasuring = false,
+    loadingComponent,
   }: VirtualScrollProps<T>,
   ref: React.ForwardedRef<DynamicScrollHandle>,
 ) {
@@ -157,45 +159,29 @@ function VirtualScrollInner<T extends VirtualScrollItem>(
     getScrollOffset: () => containerRef.current?.scrollTop ?? 0,
   }));
 
-  // --- 아이템 수 변경 처리 ---
-  useLayoutEffect(() => {
-    const el = containerRef.current;
-    if (!el || !mountedRef.current) return;
-
-    const prevCount = prevItemCountRef.current;
-    const newCount = items.length;
-    prevItemCountRef.current = newCount;
-
-    if (prevCount === newCount) return;
-
-    // prepend 감지: 위에서 데이터가 추가된 경우
-    if (prevScrollHeightRef.current > 0) {
-      const diff = el.scrollHeight - prevScrollHeightRef.current;
-      if (diff > 0) {
-        el.scrollTop = diff;
-        setScrollTop(diff);
-      }
-      prevScrollHeightRef.current = 0;
-      return;
-    }
-
-    // append: 하단에 있으면 하단 유지
-    if (isAtBottomRef.current) {
-      el.scrollTop = el.scrollHeight;
-      setScrollTop(el.scrollTop);
-    }
-  }, [items.length]);
-
-  // --- stick-to-bottom: 높이 변경 시 (이미지 로드 등) ---
+  // --- totalHeight 변경 시: prepend 위치 보존 / stick-to-bottom ---
   useLayoutEffect(() => {
     if (!mountedRef.current) return;
     const el = containerRef.current;
     if (!el) return;
 
-    if (isAtBottomRef.current) {
+    // prepend 후 스크롤 위치 보존
+    // 측정 완료(isMeasuring=false) 후에만 실행하여 정확한 높이로 보존
+    if (prevScrollHeightRef.current > 0 && !isMeasuring) {
+      const diff = el.scrollHeight - prevScrollHeightRef.current;
+      if (diff > 0) {
+        el.scrollTop += diff;
+        setScrollTop(el.scrollTop);
+      }
+      prevScrollHeightRef.current = 0;
+      return;
+    }
+
+    // stick-to-bottom: 하단에 있으면 하단 유지 (이미지 로드, 새 메시지 등)
+    if (isAtBottomRef.current && !isMeasuring) {
       el.scrollTop = el.scrollHeight;
     }
-  }, [totalHeight]);
+  }, [totalHeight, isMeasuring]);
 
   // --- 상단/하단 도달 감지 ---
   useLayoutEffect(() => {
@@ -266,6 +252,7 @@ function VirtualScrollInner<T extends VirtualScrollItem>(
       className={className}
       style={{ overflow: "auto", position: "relative", ...style }}
     >
+      {(loadingComponent && isMeasuring) && loadingComponent}
       <div style={{ position: "relative", width: "100%", height: totalHeight }}>
         {visibleChildren}
       </div>
