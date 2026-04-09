@@ -238,7 +238,7 @@ export function ChatPlayground() {
             onStartReached={handleStartReached}
             overscanCount={20}
             onAtBottomChange={setIsAtBottom}
-            loadingComponent={loading ? (
+            loadingComponent={
               <div className="flex items-center justify-center py-4 text-muted-foreground text-xs gap-2">
                 <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -246,7 +246,7 @@ export function ChatPlayground() {
                 </svg>
                 이전 메시지 불러오는 중...
               </div>
-            ) : null}
+            }
           />}
         </CardContent>
 

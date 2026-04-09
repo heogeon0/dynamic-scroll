@@ -51,7 +51,7 @@ function VirtualScrollInner<T extends VirtualScrollItem>(
   const isAtBottomRef = useRef(true);
   const prevItemCountRef = useRef(items.length);
   const prevScrollHeightRef = useRef(0);
-  const backwardLoadingRef = useRef(false);
+  const [isBackwardLoading, setIsBackwardLoading] = useState(false);
   const forwardLoadingRef = useRef(false);
   const mountedRef = useRef(false);
 
@@ -195,17 +195,17 @@ function VirtualScrollInner<T extends VirtualScrollItem>(
     if (
       actualScrollTop <= threshold &&
       onStartReached &&
-      !backwardLoadingRef.current &&
+      !isBackwardLoading &&
       prevScrollHeightRef.current === 0
     ) {
-      backwardLoadingRef.current = true;
+      setIsBackwardLoading(true);
       prevScrollHeightRef.current = el.scrollHeight;
       Promise.resolve(onStartReached())
         .catch(() => {
           prevScrollHeightRef.current = 0;
         })
         .finally(() => {
-          backwardLoadingRef.current = false;
+          setIsBackwardLoading(false);
         });
       return;
     }
@@ -252,7 +252,7 @@ function VirtualScrollInner<T extends VirtualScrollItem>(
       className={className}
       style={{ overflow: "auto", position: "relative", ...style }}
     >
-      {(loadingComponent && isMeasuring) && loadingComponent}
+      {(isBackwardLoading || isMeasuring) && loadingComponent}
       <div style={{ position: "relative", width: "100%", height: totalHeight }}>
         {visibleChildren}
       </div>
