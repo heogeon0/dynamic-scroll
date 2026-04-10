@@ -105,3 +105,34 @@
 - [x] b: 이진탐색 알고리즘 설명 페이지 - generateStartNodeIndex의 이진탐색 로직 시각화. 단계별 탐색 과정을 애니메이션으로. O(log n) vs O(n) 성능 비교 차트
 - [x] c: 높이 측정 시스템 설명 페이지 - ResizeObserver 동작 원리, InitialMeasure vs Measure 역할 분담, 높이 변경 시 전체 업데이트 플로우 다이어그램
 - [x] d: API Reference 페이지 - 모든 props, hooks, 타입의 상세 문서. 각 prop별 예제 코드 포함
+
+## v10. 스크롤 초기 위치 다양화
+> 채팅은 마지막으로 읽은 메시지 위치에서 열려야 한다 (안 읽은 메시지가 그 아래부터 보이도록).
+> 두 가지 핵심 케이스: (1) 특정 메시지를 중앙에 놓고 열기 (lastReadMessage → 중앙 정렬) (2) 최상단에서 열기
+> 중간에서 열릴 경우 양방향 로딩 필요: 위로 스크롤 → 과거 메시지, 아래로 스크롤 → 새 메시지 로드
+- [x] a: 타입 추가 - `packages/core/src/types.ts`의 `DynamicScrollProps`에 `initialScrollPosition?: "top" | "bottom" | { index: number; align?: ScrollAlign }` prop 추가. 기본값 `"bottom"` (기존 동작 유지). `VirtualScrollProps`에도 동일 전달
+- [x] b: VirtualScroll 마운트 로직 분기 - `packages/core/src/components/VirtualScroll.tsx`의 최초 마운트 useLayoutEffect를 `initialScrollPosition`에 따라 분기. `"bottom"`: 기존 (`el.scrollTop = el.scrollHeight`), `"top"`: `el.scrollTop = 0`, `{ index, align }`: `scrollToItem` 재사용하여 해당 메시지를 화면 중앙(기본 align=center)에 배치. `isAtBottomRef` 초기값도 position에 따라 설정
+- [x] c: DynamicScroll prop 전달 - `packages/core/src/DynamicScroll.tsx`에서 `initialScrollPosition` prop을 받아 VirtualScroll에 전달. `index.ts` export 타입 반영
+- [x] d: ChatPlayground 양방향 로딩 데모 - 모드 전환 UI 추가: (1) "일반 채팅" — 기존 동작 (bottom 시작, 위로만 로딩) (2) "안읽은 메시지에서 열기" — 전체 200개 중 100번째를 lastRead로 설정, 초기 로드는 lastRead 기준 위 20개+아래 10개만. 위로 스크롤 시 onStartReached로 과거 메시지, 아래로 스크롤 시 onEndReached로 새 메시지 로드. 아래 끝 도달 시 stick-to-bottom 전환. key prop으로 모드 전환 시 리마운트
+
+## v11. Sticky Group Header 실제 동작
+> 구조: GroupWrapper(absolute, 오버레이) + Separator(일반 아이템, 수평선) 이중 구조
+> GroupWrapper: top=그룹첫아이템position, height=그룹아이템총높이. 자식은 sticky 날짜 텍스트. 레이아웃에 영향 없음
+> Separator: 각 그룹 첫 번째에 수평선 아이템 삽입. 일반 아이템처럼 측정되어 childPositions에 반영
+> 효과: sticky 날짜가 떠다니다가 그룹 끝에서 다음 그룹 separator 수평선 위에 착지
+- [x] a: 타입 수정 - `VirtualScrollProps`에 `groupInfo`, `renderGroupHeader` props 추가. `DynamicScrollProps`의 `renderGroupHeader`를 sticky용과 separator용으로 분리하거나, 하나로 받아서 내부에서 두 가지로 사용
+- [x] b: DynamicScroll의 wrappedRenderItem 변경 - 기존 그룹 첫 아이템에 Fragment로 헤더 합치는 방식 제거. 대신 items 배열에 그룹 separator 아이템을 삽입하여 수평선으로 렌더. separator는 일반 아이템처럼 높이 측정됨 (heightMap에 포함). measureRenderItem도 동일하게 변경
+- [x] c: VirtualScroll에 GroupWrapper 렌더링 추가 - `div(relative, height:totalHeight)` 안에 가시 영역 그룹의 GroupWrapper를 Measure와 형제로 렌더. GroupWrapper: `position:absolute, top:그룹첫아이템position, height:그룹아이템총높이, pointer-events:none`. 자식: `position:sticky, top:0`으로 날짜 텍스트. StickyGroupHeader 컴포넌트 수정 또는 교체
+- [x] d: useGroupPositions 수정 - separator 아이템의 높이가 포함된 상태에서 그룹 높이 계산. 그룹별 시작 position(childPositions에서 조회)과 그룹 총 높이 반환. GroupWrapper의 top/height에 사용
+- [x] e: ChatPlayground 적용 - `renderGroupHeader`로 sticky 날짜 텍스트 + separator 수평선 스타일 정의. 그룹 전환 시 sticky→separator 착지 효과 확인
+
+## v12. How It Works 페이지 개선
+- [ ] a: Sticky Group Header 원리 섹션 추가 - `apps/docs/src/app/how-it-works/page.tsx`에 새 섹션 추가. CSS `position: sticky` + `height` 제한으로 push-up 효과 구현 원리 설명. `cumulativeHeight` 계산 로직 다이어그램. 그룹 전환 시 헤더가 밀려 올라가는 메커니즘 시각화 (현재 그룹의 height - cumulativeHeight로 sticky 영역 제한)
+- [ ] b: 기존 섹션 디자인/가독성 개선 - ASCII 다이어그램을 CSS 기반 시각적 다이어그램으로 교체 (div + border + 색상으로 스크롤 컨테이너/뷰포트/아이템 표현). `<pre>` 블록의 가독성 향상 (배경색, 폰트 크기, 패딩 조정). 섹션 간 앵커 네비게이션 추가 (페이지 상단에 목차)
+- [ ] c: 코드 블록 개선 - 인라인 `<code>` 및 `<pre>` 블록에 구문 하이라이팅 적용 (shiki 또는 prism). 실제 소스 코드 스니펫 포함 (binarySearch.ts, useHeightMap.ts 등의 핵심 로직)
+
+## v13. 채팅 데모 UI 개선
+- [ ] a: 채팅 버블 디자인 개선 - `apps/docs/src/components/playground/ChatPlayground.tsx`의 `renderItem` 수정. 내 메시지는 오른쪽 정렬 + 말풍선 스타일 (rounded + tail), 상대 메시지는 왼쪽 정렬. 아바타/프로필 아이콘 추가 (lucide-react 아이콘 또는 이니셜). 시간 표시 위치를 메시지 버블 하단으로 이동
+- [ ] b: 컨트롤 패널 개선 - scrollToItem의 `align` 옵션 (start/center/end) 선택 UI 추가 (shadcn/ui Select 또는 RadioGroup). shadcn/ui Input으로 교체. 컨트롤 패널 레이아웃 정리
+- [ ] c: 하단으로 스크롤 플로팅 버튼 추가 - 채팅 영역 하단 우측에 플로팅 "하단으로" 버튼 추가. `onAtBottomChange` 콜백으로 하단이 아닐 때만 표시. 클릭 시 `scrollToBottom({ behavior: "smooth" })` 호출. 새 메시지 수 배지 표시 (선택)
+- [ ] d: 메시지 입력 UI 개선 - native input을 shadcn/ui Input으로 교체. 전송 버튼 스타일 개선. Enter 키 전송 동작 확인

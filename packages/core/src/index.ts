@@ -24,6 +24,7 @@ export type {
   ScrollState,
   DynamicScrollHandle,
   ScrollAlign,
+  InitialScrollPosition,
   DynamicScrollProps,
   VirtualScrollProps,
 } from "./types";

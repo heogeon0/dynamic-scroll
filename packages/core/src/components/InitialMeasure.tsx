@@ -6,7 +6,7 @@ interface InitialMeasureProps {
   onMeasured: (id: string, height: number) => void;
 }
 
-const IMAGE_LOAD_TIMEOUT = 3000;
+const IMAGE_LOAD_TIMEOUT = 5000;
 
 /**
  * 사전 높이 측정용 컴포넌트.
@@ -25,10 +25,18 @@ export function InitialMeasure({
     const node = ref.current;
     if (!node || reportedRef.current) return;
 
-    const report = () => {
+    const report = (reason: string) => {
       if (reportedRef.current) return;
       reportedRef.current = true;
       const height = Math.ceil(node.offsetHeight);
+      const images = node.querySelectorAll("img");
+      const imgInfo = Array.from(images).map((img) => ({
+        complete: img.complete,
+        naturalHeight: img.naturalHeight,
+        offsetHeight: img.offsetHeight,
+        src: img.src.slice(-40),
+      }));
+      console.log(`[InitialMeasure] ${itemId} → ${height}px (${reason})`, imgInfo.length > 0 ? imgInfo : "no images");
       onMeasured(itemId, Math.max(height, 1));
     };
 
@@ -40,16 +48,16 @@ export function InitialMeasure({
     });
 
     if (pending.length === 0) {
-      // 이미지 없거나 모두 로드 완료 → 다음 마이크로태스크에서 보고
-      // (같은 렌더 사이클 내 setState 방지)
-      queueMicrotask(report);
+      queueMicrotask(() => report(images.length > 0 ? "images already complete" : "no images"));
       return;
     }
+
+    console.log(`[InitialMeasure] ${itemId} waiting for ${pending.length} image(s)`);
 
     let remaining = pending.length;
     const onSettled = () => {
       remaining--;
-      if (remaining <= 0) report();
+      if (remaining <= 0) report("image load/error");
     };
 
     pending.forEach((img) => {
@@ -57,7 +65,7 @@ export function InitialMeasure({
       img.addEventListener("error", onSettled, { once: true });
     });
 
-    const timeout = setTimeout(report, IMAGE_LOAD_TIMEOUT);
+    const timeout = setTimeout(() => report("timeout"), IMAGE_LOAD_TIMEOUT);
 
     return () => {
       clearTimeout(timeout);

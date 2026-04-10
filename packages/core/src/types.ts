@@ -44,6 +44,17 @@ export interface DynamicScrollHandle {
 export type ScrollAlign = "start" | "center" | "end";
 
 /**
+ * 초기 스크롤 위치 설정.
+ * - "top": 최상단에서 시작
+ * - "bottom": 최하단에서 시작 (기본값)
+ * - { index, align? }: 특정 아이템 위치에서 시작 (예: 마지막으로 읽은 메시지)
+ */
+export type InitialScrollPosition =
+  | "top"
+  | "bottom"
+  | { index: number; align?: ScrollAlign };
+
+/**
  * DynamicScroll 컴포넌트의 props.
  */
 export interface DynamicScrollProps<T extends VirtualScrollItem> {
@@ -71,10 +82,20 @@ export interface DynamicScrollProps<T extends VirtualScrollItem> {
   style?: React.CSSProperties;
   /** 그룹 분류 함수. 아이템을 그룹핑할 키를 반환 */
   groupBy?: (item: T) => string;
-  /** 그룹 헤더 렌더링 함수 */
+  /** sticky 그룹 헤더 렌더링 함수. 스크롤 시 상단에 떠다니는 날짜 텍스트 등 */
   renderGroupHeader?: (groupKey: string) => ReactNode;
+  /** 그룹 구분선 렌더링 함수. 각 그룹 첫 번째에 삽입되는 수평선. 일반 아이템처럼 높이가 측정됨 */
+  renderGroupSeparator?: (groupKey: string) => ReactNode;
   /** 상단 로딩 중 표시할 컴포넌트 */
   loadingComponent?: ReactNode;
+  /** 하단 로딩 중 표시할 컴포넌트 */
+  bottomLoadingComponent?: ReactNode;
+  /** 초기 스크롤 위치. 기본값: "bottom" */
+  initialScrollPosition?: InitialScrollPosition;
+  /** 새 아이템의 높이 측정이 완료되었을 때 호출되는 콜백. 리마운트 없이 scrollToItem 등을 안전하게 호출할 수 있는 시점. */
+  onMeasurementComplete?: () => void;
+  /** 초기 높이 측정 중 표시할 로딩 컴포넌트 */
+  initialLoadingComponent?: ReactNode;
 }
 
 /**
@@ -112,6 +133,18 @@ export interface VirtualScrollProps<T extends VirtualScrollItem> {
   style?: React.CSSProperties;
   /** 백그라운드 측정 진행 중 여부 (DynamicScroll 내부용) */
   isMeasuring?: boolean;
+  /** 그룹 정보 (GroupWrapper 렌더링용) */
+  groupInfo?: {
+    heightByGroup: Map<string, number>;
+    groupKeyByIndex: string[];
+    groupStartPositions: Map<string, number>;
+  } | null;
+  /** sticky 그룹 헤더 렌더링 함수 */
+  renderGroupHeader?: (groupKey: string) => ReactNode;
   /** 상단 로딩 중 표시할 컴포넌트 */
   loadingComponent?: ReactNode;
+  /** 하단 로딩 중 표시할 컴포넌트 */
+  bottomLoadingComponent?: ReactNode;
+  /** 초기 스크롤 위치. 기본값: "bottom" */
+  initialScrollPosition?: InitialScrollPosition;
 }
