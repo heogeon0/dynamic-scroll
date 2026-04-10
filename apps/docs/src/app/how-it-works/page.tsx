@@ -208,6 +208,188 @@ VirtualScroll에서 실제 렌더
 
       <Separator />
 
+      <section id="sticky-group-header" className="space-y-4">
+        <h2 className="text-2xl font-semibold">Sticky Group Header</h2>
+        <p className="text-muted-foreground">
+          가상 스크롤에서 CSS <code className="bg-muted px-1 rounded">position: sticky</code>를
+          동작시키는 것은 까다롭습니다. 아이템이 absolute positioned이기 때문입니다.
+          이 라이브러리는 <strong>GroupWrapper + Separator 이중 구조</strong>로 해결합니다.
+        </p>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">문제: absolute 아이템에서 sticky가 안 되는 이유</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <pre className="text-xs bg-muted p-4 rounded-lg overflow-x-auto">
+{`일반적인 가상 스크롤 구조:
+div (overflow: auto)
+  └─ div (relative, height: totalHeight)
+       ├─ Item[0]  position: absolute, top: 0
+       ├─ Item[1]  position: absolute, top: 48
+       └─ Item[2]  position: absolute, top: 96
+
+문제: 날짜 헤더를 아이템 안에 넣으면?
+  Item[0] = [날짜 헤더] + [메시지]  ← 함께 absolute
+  → 스크롤하면 날짜 헤더도 같이 사라짐
+  → sticky를 걸어도 absolute 안이라 동작 안 함
+
+문제: 날짜 헤더를 별도 아이템으로 넣으면?
+  DateHeader  position: absolute, top: 0
+  Item[0]     position: absolute, top: 32
+  → absolute 요소에 sticky를 걸 수 없음`}
+            </pre>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">해결: GroupWrapper + Separator 이중 구조</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <pre className="text-xs bg-muted p-4 rounded-lg overflow-x-auto">
+{`div (relative, height: totalHeight)
+│
+├─ GroupWrapper ──────────────────────────────────┐
+│  position: absolute                             │
+│  top: 그룹 첫 아이템의 position                  │
+│  height: 그룹 내 모든 아이템 높이의 합            │
+│  pointer-events: none (클릭 투과)               │
+│  ┌──────────────────────────────────────────┐   │
+│  │ position: sticky, top: 0                 │   │
+│  │ → "2024년 1월 15일 수요일"                │   │
+│  │ (떠다니는 날짜 라벨)                      │   │
+│  └──────────────────────────────────────────┘   │
+├─────────────────────────────────────────────────┘
+│
+├─ Measure[separator]  ←── 수평선 (높이 측정됨, 레이아웃에 영향)
+├─ Measure[msg-1]
+├─ Measure[msg-2]
+├─ Measure[msg-3]
+│
+├─ GroupWrapper (다음 그룹) ──────────────────────┐
+│  ┌──────────────────────────────────────────┐   │
+│  │ sticky → "2024년 1월 16일 목요일"         │   │
+│  └──────────────────────────────────────────┘   │
+├─────────────────────────────────────────────────┘
+├─ Measure[separator]
+├─ Measure[msg-4]
+└─ ...`}
+            </pre>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">왜 이중 구조인가?</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <p className="text-sm font-medium">GroupWrapper (오버레이)</p>
+                <pre className="text-xs bg-muted p-3 rounded-lg">
+{`역할: sticky 날짜 라벨의 활동 범위 제한
+위치: absolute (레이아웃에 영향 없음)
+높이: 그룹 아이템 총 높이
+자식: sticky 날짜 라벨 (유일한 자식)
+
+핵심: height가 그룹 높이의 합이므로
+CSS sticky가 이 범위 안에서만 동작
+→ 그룹 끝에서 자연스럽게 push-up`}
+                </pre>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Separator (수평선)</p>
+                <pre className="text-xs bg-muted p-3 rounded-lg">
+{`역할: 그룹 구분선 + 높이 확보
+위치: 일반 아이템 (Measure로 래핑)
+높이: heightMap에 포함 → childPositions 반영
+시각: 수평선 (날짜 텍스트 없음)
+
+핵심: 아이템처럼 측정되어 다른
+아이템들의 position에 영향을 줌`}
+                </pre>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">sticky 착지 효과</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <pre className="text-xs bg-muted p-4 rounded-lg overflow-x-auto">
+{`스크롤 중 (그룹 A 영역):
+┌─────────────────────────────────┐
+│ ┌─ sticky ──────────────────┐   │ ← 떠다니는 "1월 15일"
+│ │   2024년 1월 15일 수요일   │   │
+│ └───────────────────────────┘   │
+│                                 │
+│  [메시지 1]                     │
+│  [메시지 2]                     │
+│  [메시지 3]                     │
+│                                 │
+│  ───── 1월 16일 ─────           │ ← separator 수평선
+│  [메시지 4]                     │
+└─────────────────────────────────┘
+
+그룹 A 끝 도달 (push-up):
+┌─────────────────────────────────┐
+│  [메시지 3]                     │
+│ ┌─ sticky (착지 중) ────────┐   │ ← "1월 15일"이 밀려 내려옴
+│ │   2024년 1월 15일 수요일   │   │
+│ └───────────────────────────┘   │
+│  ───── 1월 16일 ─────           │ ← separator와 만남 (합쳐지는 효과)
+│ ┌─ sticky ──────────────────┐   │ ← 새로운 "1월 16일" 떠오름
+│ │   2024년 1월 16일 목요일   │   │
+│ └───────────────────────────┘   │
+│  [메시지 4]                     │
+│  [메시지 5]                     │
+└─────────────────────────────────┘
+
+→ GroupWrapper의 height가 정확해야 착지 타이밍이 맞음
+→ separator가 없으면 날짜 라벨이 그냥 사라져서 어색함`}
+            </pre>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">구현 핵심: GroupWrapper의 height 계산</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <pre className="text-xs bg-muted p-4 rounded-lg overflow-x-auto">
+{`items에 separator 자동 삽입:
+[sep-A] [msg-1] [msg-2] [msg-3] [sep-B] [msg-4] [msg-5]
+
+heightMap:
+  sep-A → 32px, msg-1 → 64px, msg-2 → 48px, msg-3 → 120px
+  sep-B → 32px, msg-4 → 64px, msg-5 → 48px
+
+그룹 A 높이 = sep-A + msg-1 + msg-2 + msg-3 = 264px
+그룹 B 높이 = sep-B + msg-4 + msg-5 = 144px
+
+GroupWrapper A:
+  top = childPositions[sep-A의 인덱스] = 0
+  height = 264px
+
+GroupWrapper B:
+  top = childPositions[sep-B의 인덱스] = 264px
+  height = 144px`}
+            </pre>
+            <p className="text-sm text-muted-foreground mt-3">
+              separator는 <strong>일반 아이템으로 취급</strong>되어 heightMap에 높이가 기록됩니다.
+              따라서 그룹 높이에 separator의 높이도 포함되고,
+              GroupWrapper의 height가 정확하게 설정됩니다.
+              아이템이 추가/제거되면 높이가 자동으로 재계산되어 GroupWrapper도 업데이트됩니다.
+            </p>
+          </CardContent>
+        </Card>
+      </section>
+
+      <Separator />
+
       <section id="bidirectional-scroll" className="space-y-4">
         <h2 className="text-2xl font-semibold">양방향 무한 스크롤</h2>
         <p className="text-muted-foreground">

@@ -31,14 +31,26 @@ export function useHeightMap<T extends VirtualScrollItem>({
   const batchRafRef = useRef<number | null>(null);
   const [version, setVersion] = useState(0);
 
-  // 미측정 아이템 계산
+  // 미측정 아이템 계산 + pendingIds를 현재 items 기준으로 동기화
   const unmeasuredIds: string[] = [];
+  const currentIds = new Set<string>();
+
   if (estimatedItemSize === undefined) {
     for (const item of items) {
+      currentIds.add(item.id);
       if (!heightMapRef.current.has(item.id)) {
         unmeasuredIds.push(item.id);
-        pendingIdsRef.current.add(item.id);
       }
+    }
+    // items에서 사라진 id를 pendingIds에서 제거 (아이템 교체 시 stale pending 방지)
+    for (const id of pendingIdsRef.current) {
+      if (!currentIds.has(id)) {
+        pendingIdsRef.current.delete(id);
+      }
+    }
+    // 새 unmeasured를 pending에 추가
+    for (const id of unmeasuredIds) {
+      pendingIdsRef.current.add(id);
     }
   }
 

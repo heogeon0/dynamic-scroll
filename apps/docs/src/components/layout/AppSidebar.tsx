@@ -27,6 +27,7 @@ const NAV_ITEMS = [
       { title: "가상 스크롤 원리", href: "/how-it-works#virtual-scroll" },
       { title: "이진 탐색 알고리즘", href: "/how-it-works#binary-search" },
       { title: "높이 측정 시스템", href: "/how-it-works#measurement" },
+      { title: "Sticky Group Header", href: "/how-it-works#sticky-group-header" },
       { title: "양방향 무한 스크롤", href: "/how-it-works#bidirectional-scroll" },
     ],
   },

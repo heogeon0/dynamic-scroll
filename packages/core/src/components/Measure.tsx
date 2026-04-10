@@ -29,7 +29,7 @@ function MeasureInner({
   knownHeight,
 }: MeasureProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const prevHeightRef = useRef<number>(0);
+  const prevHeightRef = useRef<number>(knownHeight ?? 0);
   const [heightLocked, setHeightLocked] = useState(!!knownHeight);
 
   // --- ResizeObserver: 높이 변경 감지 ---
@@ -39,8 +39,11 @@ function MeasureInner({
 
     const measure = () => {
       const newHeight = Math.ceil(node.offsetHeight);
-      if (prevHeightRef.current === newHeight) return;
+      // 언마운트 시 ResizeObserver가 0을 감지 → heightMap 오염 방지
+      if (newHeight === 0 || prevHeightRef.current === newHeight) return;
+      const oldHeight = prevHeightRef.current;
       prevHeightRef.current = newHeight;
+      console.log(`[Measure] ${itemId} height changed: ${oldHeight} → ${newHeight} (locked: ${heightLocked}, knownHeight: ${knownHeight})`);
       onHeightChange(itemId, newHeight);
     };
 
@@ -59,15 +62,13 @@ function MeasureInner({
     if (!node) return;
 
     const mutationObserver = new MutationObserver(() => {
-      // 내부 요소 변경 감지 → 높이 잠금 해제 → 리플로우 허용
+      console.log(`[Measure] ${itemId} mutation detected → unlocking height (was ${knownHeight}px)`);
       setHeightLocked(false);
     });
 
     mutationObserver.observe(node, {
       childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["src", "srcset", "width", "height"],
+      subtree: false,
     });
 
     return () => {

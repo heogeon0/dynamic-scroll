@@ -54,6 +54,8 @@ function VirtualScrollInner<T extends VirtualScrollItem>(
   const animationFrameRef = useRef<number | null>(null);
   const isAtBottomRef = useRef(true);
   const mountedRef = useRef(false);
+  // 프로그래매틱 스크롤 후 reach 감지/stick-to-bottom 일시 차단
+  const programmaticScrollRef = useRef(false);
 
   // --- 양방향 무한 스크롤: 로딩 가드 ---
   // backward(prepend): scrollHeight 보존 → 측정 완료 후 scrollTop 보정
@@ -134,7 +136,8 @@ function VirtualScrollInner<T extends VirtualScrollItem>(
           setScrollTop(newScrollTop);
         }
 
-        // 하단 판정 (DOM에서 직접 읽기)
+        // 하단 판정 (프로그래매틱 스크롤 중에는 건너뜀)
+        if (programmaticScrollRef.current) return;
         const atBottom =
           target.scrollHeight - newScrollTop - target.clientHeight <= 1;
         if (isAtBottomRef.current !== atBottom) {
@@ -168,7 +171,10 @@ function VirtualScrollInner<T extends VirtualScrollItem>(
   const scrollToItem = useCallback(
     (index: number, align: ScrollAlign = "center") => {
       const el = containerRef.current;
-      if (!el || index < 0 || index >= items.length) return;
+      if (!el || index < 0 || index >= items.length) {
+        console.warn('[scrollToItem] SKIP', { index, itemsLength: items.length, hasEl: !!el });
+        return;
+      }
 
       const itemTop = childPositions[index];
       const itemHeight = heightMapRef.current.get(items[index].id) ?? 0;
@@ -182,8 +188,29 @@ function VirtualScrollInner<T extends VirtualScrollItem>(
         // center: 아이템 중심이 뷰포트 중앙에 오도록
         target = itemTop + itemHeight / 2 - el.clientHeight / 2;
       }
-      console.log('[scrollToItem]', { index, align, target, itemTop, itemHeight, viewportHeight: el.clientHeight });
-      el.scrollTo({ top: Math.max(0, target), left: 0, behavior: "auto" });
+      const maxScrollTop = el.scrollHeight - el.clientHeight;
+      const finalTarget = Math.max(0, Math.min(target, maxScrollTop));
+      console.log('[scrollToItem]', {
+        index,
+        align,
+        itemId: items[index].id,
+        itemTop,
+        itemHeight,
+        target,
+        finalTarget,
+        viewportHeight: el.clientHeight,
+        scrollHeight: el.scrollHeight,
+        totalHeight,
+        maxScrollTop,
+      });
+      // 프로그래매틱 이동: stick-to-bottom/reach 일시 차단
+      programmaticScrollRef.current = true;
+      isAtBottomRef.current = false;
+      el.scrollTo({ top: finalTarget, left: 0, behavior: "auto" });
+      // 다음 rAF에서 해제 (onScroll의 rAF 이후)
+      requestAnimationFrame(() => {
+        programmaticScrollRef.current = false;
+      });
     },
     [childPositions, items, heightMapRef],
   );
@@ -249,7 +276,7 @@ function VirtualScrollInner<T extends VirtualScrollItem>(
   //
   useLayoutEffect(() => {
     const el = containerRef.current;
-    if (!el || !mountedRef.current) return;
+    if (!el || !mountedRef.current || programmaticScrollRef.current) return;
 
     const actualScrollTop = el.scrollTop;
 
@@ -260,7 +287,7 @@ function VirtualScrollInner<T extends VirtualScrollItem>(
       !backwardLoadingRef.current &&
       prevScrollHeightRef.current === 0
     ) {
-      console.log('[reach] START reached', { actualScrollTop, threshold, scrollTop });
+      console.log('[reach] START reached', { actualScrollTop, threshold, scrollHeight: el.scrollHeight, hasCallback: !!onStartReached });
       backwardLoadingRef.current = true;
       prevScrollHeightRef.current = el.scrollHeight;
       Promise.resolve(onStartReached()).catch(() => {
@@ -277,7 +304,7 @@ function VirtualScrollInner<T extends VirtualScrollItem>(
       onEndReached &&
       !forwardLoadingRef.current
     ) {
-      console.log('[reach] END reached', { distFromBottom, threshold, scrollTop });
+      console.log('[reach] END reached', { distFromBottom, threshold, actualScrollTop, scrollHeight: el.scrollHeight, clientHeight: el.clientHeight });
       forwardLoadingRef.current = true;
       Promise.resolve(onEndReached()).catch(() => {
         forwardLoadingRef.current = false;

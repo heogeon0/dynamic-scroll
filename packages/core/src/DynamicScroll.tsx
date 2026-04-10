@@ -107,8 +107,9 @@ function DynamicScrollInner<T extends VirtualScrollItem>(
 
   // 초기 측정 완료 여부를 한 번만 추적
   const hasEverMeasuredRef = useRef(false);
-  if (isAllMeasured) {
+  if (isAllMeasured && !hasEverMeasuredRef.current) {
     hasEverMeasuredRef.current = true;
+    console.log('[DynamicScroll] initial measurement complete', { itemCount: allItems.length, unmeasuredCount: unmeasuredIds.length });
   }
 
   // 현재 측정 중인지 (초기 이후 새 아이템 추가 시)
@@ -124,22 +125,50 @@ function DynamicScrollInner<T extends VirtualScrollItem>(
   useEffect(() => {
     if (isMeasuring) {
       wasMeasuringRef.current = true;
+      console.log('[DynamicScroll] measuring started', { unmeasuredCount: unmeasuredIds.length, totalItems: allItems.length });
     } else if (wasMeasuringRef.current) {
       wasMeasuringRef.current = false;
+      console.log('[DynamicScroll] measuring complete', { hasPendingScroll: !!pendingScrollRef.current });
       if (pendingScrollRef.current) {
         pendingScrollRef.current();
         pendingScrollRef.current = null;
       }
       onMeasurementComplete?.();
     }
-  }, [isMeasuring, onMeasurementComplete]);
+  }, [isMeasuring, onMeasurementComplete, unmeasuredIds.length, allItems.length]);
+
+  /**
+   * 외부 index (원본 items 기준) → 내부 index (separator 포함 배열 기준) 변환.
+   * separator가 없으면 그대로 반환.
+   */
+  const toInternalIndex = useCallback(
+    (externalIndex: number): number => {
+      if (!groupBy || !renderGroupSeparator) return externalIndex;
+      // separator는 각 그룹 시작 전에 1개씩 삽입되므로,
+      // 외부 index까지의 그룹 전환 횟수만큼 offset 추가
+      let separatorCount = 0;
+      let prevGroup: string | null = null;
+      for (let i = 0; i <= externalIndex && i < items.length; i++) {
+        const group = groupBy(items[i]);
+        if (group !== prevGroup) {
+          separatorCount++;
+          prevGroup = group;
+        }
+      }
+      return externalIndex + separatorCount;
+    },
+    [items, groupBy, renderGroupSeparator],
+  );
 
   useImperativeHandle(ref, () => ({
     scrollToItem: (index, align) => {
-      const action = () => innerRef.current?.scrollToItem(index, align);
+      const internalIdx = toInternalIndex(index);
+      console.log('[DynamicScroll.scrollToItem]', { externalIndex: index, internalIndex: internalIdx, align, isMeasuring: isMeasuringRef.current });
+      const action = () => innerRef.current?.scrollToItem(internalIdx, align);
       isMeasuringRef.current ? (pendingScrollRef.current = action) : action();
     },
     scrollToBottom: (behavior) => {
+      console.log('[DynamicScroll.scrollToBottom]', { behavior, isMeasuring: isMeasuringRef.current, queued: isMeasuringRef.current });
       const action = () => innerRef.current?.scrollToBottom(behavior);
       isMeasuringRef.current ? (pendingScrollRef.current = action) : action();
     },
@@ -269,7 +298,11 @@ function DynamicScrollInner<T extends VirtualScrollItem>(
         isMeasuring={isMeasuring}
         loadingComponent={loadingComponent}
         bottomLoadingComponent={bottomLoadingComponent}
-        initialScrollPosition={initialScrollPosition}
+        initialScrollPosition={
+          typeof initialScrollPosition === "object" && "index" in initialScrollPosition
+            ? { ...initialScrollPosition, index: toInternalIndex(initialScrollPosition.index) }
+            : initialScrollPosition
+        }
         groupInfo={virtualScrollGroupInfo}
         renderGroupHeader={renderGroupHeader}
       />
