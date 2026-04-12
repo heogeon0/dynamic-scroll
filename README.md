@@ -2,7 +2,7 @@
 
 **사전 렌더링 기반 채팅앱 최적화 가상 스크롤 라이브러리**
 
-> [Documentation & Demo](<!-- DOCS_URL -->)
+> [Documentation & Demo](https://dynamic-scroll-docs.vercel.app/)
 
 메신저 서비스를 개발하면서, 각 요소의 높이를 알 수 없는 상황에서도 사용할 수 있는 가상 스크롤 라이브러리입니다.
 
