@@ -1,23 +1,16 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { JetBrains_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AppSidebar } from "@/components/layout/AppSidebar";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "dynamic-scroll Playground",
-  description: "사전 측정 기반 가상 스크롤 라이브러리 플레이그라운드",
+  title: "dynamic-scroll",
+  description: "Pre-render measurement based virtual scroll library",
 };
 
 export default function RootLayout({
@@ -26,21 +19,42 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="ko"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
+    <html lang="ko" className={`${jetbrainsMono.variable} h-full antialiased`}>
+      <head>
+        <link
+          rel="stylesheet"
+          as="style"
+          crossOrigin="anonymous"
+          href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"
+        />
+      </head>
       <body className="min-h-full flex flex-col">
         <TooltipProvider>
-          <SidebarProvider>
-            <AppSidebar />
-            <main className="flex-1">
-              <div className="sticky top-0 z-10 bg-background/80 backdrop-blur border-b px-4 py-2 md:hidden">
-                <SidebarTrigger />
-              </div>
-              <div className="max-w-5xl mx-auto px-6 py-8">{children}</div>
-            </main>
-          </SidebarProvider>
+          {/* Top Navigation */}
+          <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-sm">
+            <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
+              <span className="text-sm font-semibold tracking-tight">
+                dynamic scroll
+              </span>
+              <nav className="flex items-center gap-6 text-sm text-muted-foreground">
+                <a href="#how-it-works" className="hover:text-foreground transition-colors">
+                  Docs
+                </a>
+                <a
+                  href="https://github.com/heogeon0/dynamic-scroll"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-foreground transition-colors"
+                >
+                  Github
+                </a>
+              </nav>
+            </div>
+          </header>
+
+          <main className="flex-1">
+            <div className="max-w-6xl mx-auto px-6 py-16">{children}</div>
+          </main>
         </TooltipProvider>
       </body>
     </html>

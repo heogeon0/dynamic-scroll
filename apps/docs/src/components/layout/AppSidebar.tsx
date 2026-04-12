@@ -16,25 +16,23 @@ import {
 
 const NAV_ITEMS = [
   {
-    group: "플레이그라운드",
-    items: [
-      { title: "채팅 데모", href: "/" },
-    ],
+    group: "Playground",
+    items: [{ title: "Chat Demo", href: "/" }],
   },
   {
-    group: "구현 원리",
+    group: "How It Works",
     items: [
-      { title: "가상 스크롤 원리", href: "/how-it-works#virtual-scroll" },
-      { title: "이진 탐색 알고리즘", href: "/how-it-works#binary-search" },
-      { title: "높이 측정 시스템", href: "/how-it-works#measurement" },
+      { title: "Virtual Scroll", href: "/how-it-works#virtual-scroll" },
+      { title: "Binary Search", href: "/how-it-works#binary-search" },
+      { title: "Height Measurement", href: "/how-it-works#measurement" },
       { title: "Sticky Group Header", href: "/how-it-works#sticky-group-header" },
-      { title: "양방향 무한 스크롤", href: "/how-it-works#bidirectional-scroll" },
+      { title: "Bidirectional Scroll", href: "/how-it-works#bidirectional-scroll" },
     ],
   },
   {
-    group: "응용 패턴",
+    group: "Patterns",
     items: [
-      { title: "채팅 앱 구현 패턴", href: "/how-it-works#chat-patterns" },
+      { title: "Chat App Patterns", href: "/how-it-works#chat-patterns" },
     ],
   },
 ];
@@ -44,25 +42,33 @@ export function AppSidebar() {
 
   return (
     <Sidebar>
-      <SidebarHeader className="p-4">
-        <Link href="/" className="flex items-center gap-2 font-bold text-lg">
-          dynamic-scroll
+      <SidebarHeader className="p-5">
+        <Link href="/" className="flex flex-col gap-1">
+          <span className="font-semibold text-base tracking-tight">
+            dynamic-scroll
+          </span>
+          <span className="text-xs text-muted-foreground leading-snug">
+            Pre-render measurement based virtual scroll
+          </span>
         </Link>
-        <p className="text-xs text-muted-foreground">
-          사전 측정 기반 가상 스크롤 라이브러리
-        </p>
       </SidebarHeader>
       <SidebarContent>
         {NAV_ITEMS.map((group) => (
           <SidebarGroup key={group.group}>
-            <SidebarGroupLabel>{group.group}</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
+              {group.group}
+            </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {group.items.map((item) => (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                       render={<Link href={item.href} />}
-                      isActive={pathname === item.href || (pathname.startsWith(item.href.split("#")[0]) && item.href.split("#")[0] !== "/")}
+                      isActive={
+                        pathname === item.href ||
+                        (pathname.startsWith(item.href.split("#")[0]) &&
+                          item.href.split("#")[0] !== "/")
+                      }
                     >
                       {item.title}
                     </SidebarMenuButton>
