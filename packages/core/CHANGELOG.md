@@ -1,3 +1,9 @@
+## [1.2.1](https://github.com/heogeon0/dynamic-scroll/compare/v1.2.0...v1.2.1) (2026-04-12)
+
+### Bug Fixes
+
+* **core:** scoped 패키지 public 배포 설정 추가 ([575b6a2](https://github.com/heogeon0/dynamic-scroll/commit/575b6a28898aee5595005bd02684b79c697d4042))
+
 ## [1.2.0](https://github.com/heogeon0/dynamic-scroll/compare/v1.1.0...v1.2.0) (2026-04-12)
 
 ### Features

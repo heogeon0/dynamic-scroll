@@ -3,7 +3,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Headless virtual scroll library with pre-render measurement for pixel-perfect accuracy",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
