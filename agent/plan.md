@@ -44,7 +44,7 @@
 - [x] a: 프로젝트 구조 생성 - Turborepo 기반 monorepo. `packages/core` (라이브러리)와 `apps/docs` (문서/플레이그라운드 사이트) 디렉토리 설정. root `package.json` (pnpm workspace), `turbo.json` (build/dev/lint 파이프라인, 캐싱 설정), `pnpm-workspace.yaml`, `tsconfig.json` (base config), `.gitignore` 생성
 - [x] b: `packages/core` 패키지 초기화 - `package.json` (name: `@dynamic-scroll/core`, main/module/types 엔트리), `tsconfig.json` (React JSX, declaration 출력), tsup 빌드 설정 (ESM/CJS 듀얼 빌드, dts 생성). 디렉토리: `packages/core/src/`. **헤드리스 설계**: 인라인 스타일은 레이아웃(position, top)에만 사용, 시각적 스타일링 없음. 소비자가 className/style을 주입할 수 있도록 설계
 - [x] c: `apps/docs` 플레이그라운드 초기화 - Next.js + TypeScript (App Router). `packages/core`를 workspace dependency로 연결. shadcn/ui + Tailwind CSS 설정. Playwright 설치. `turbo.json`에서 `docs#build`가 `core#build`에 의존하도록 파이프라인 설정
-- [ ] d: 커밋 컨벤션 + 자동 릴리스 설정 (hiworks-editor 참고, GitHub 버전)
+- [x] d: 커밋 컨벤션 + 자동 릴리스 설정 (hiworks-editor 참고, GitHub 버전)
   - **cz-git**: `cz.config.ts` 생성 (한글 메시지, emoji, scopes: core/docs). root `package.json`에 commitizen config + `commit` 스크립트 추가. devDependencies: `commitizen`, `cz-git`
   - **semantic-release**: `packages/core/release.config.mjs` 생성. plugins: commit-analyzer (core scope → feat=minor, fix=patch), release-notes-generator, changelog, npm publish, git (CHANGELOG.md + package.json 커밋). devDependencies: `semantic-release`, `@semantic-release/changelog`, `@semantic-release/git`
   - **GitHub Actions**: `.github/workflows/release.yml` 생성. master push 시 → pnpm install → turbo build → semantic-release. secrets: `NPM_TOKEN`, `GITHUB_TOKEN` (자동 제공)
@@ -133,6 +133,6 @@
 
 ## v13. 채팅 데모 UI 개선
 - [ ] a: 채팅 버블 디자인 개선 - `apps/docs/src/components/playground/ChatPlayground.tsx`의 `renderItem` 수정. 내 메시지는 오른쪽 정렬 + 말풍선 스타일 (rounded + tail), 상대 메시지는 왼쪽 정렬. 아바타/프로필 아이콘 추가 (lucide-react 아이콘 또는 이니셜). 시간 표시 위치를 메시지 버블 하단으로 이동
-- [ ] b: 컨트롤 패널 개선 - scrollToItem의 `align` 옵션 (start/center/end) 선택 UI 추가 (shadcn/ui Select 또는 RadioGroup). shadcn/ui Input으로 교체. 컨트롤 패널 레이아웃 정리
-- [ ] c: 하단으로 스크롤 플로팅 버튼 추가 - 채팅 영역 하단 우측에 플로팅 "하단으로" 버튼 추가. `onAtBottomChange` 콜백으로 하단이 아닐 때만 표시. 클릭 시 `scrollToBottom({ behavior: "smooth" })` 호출. 새 메시지 수 배지 표시 (선택)
-- [ ] d: 메시지 입력 UI 개선 - native input을 shadcn/ui Input으로 교체. 전송 버튼 스타일 개선. Enter 키 전송 동작 확인
+- [x] b: 컨트롤 패널 개선 - 로드된/안된 메시지로 이동, 새 메시지 수신 버튼 추가. isLastMessageLoaded 뱃지 표시. (align 선택 UI는 불필요로 스킵)
+- [x] c: 하단으로 스크롤 플로팅 버튼 추가 - goToLatest (isLastMessageLoaded 분기), 새 메시지 알림 카카오톡 스타일 버튼, onAtBottomChange로 표시/숨김
+- [x] d: 메시지 입력 UI 개선 - Enter 키 전송 + IME 조합 처리 (isComposing), sendMessage isLastMessageLoaded 분기
