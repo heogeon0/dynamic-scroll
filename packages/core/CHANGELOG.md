@@ -1,3 +1,9 @@
+## [1.2.0](https://github.com/heogeon0/dynamic-scroll/compare/v1.1.0...v1.2.0) (2026-04-12)
+
+### Features
+
+* **core:** npm 배포 재시도 ([1d296d9](https://github.com/heogeon0/dynamic-scroll/commit/1d296d90a81223c0c3a1508497c1f69804122f87))
+
 ## [1.1.0](https://github.com/heogeon0/dynamic-scroll/compare/v1.0.0...v1.1.0) (2026-04-12)
 
 ### Features
