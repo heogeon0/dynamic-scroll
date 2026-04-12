@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/heogeon0/dynamic-scroll/compare/v1.0.0...v1.1.0) (2026-04-12)
+
+### Features
+
+* **core:** npm 배포 트리거 ([ef08598](https://github.com/heogeon0/dynamic-scroll/commit/ef08598e14a272b91891932cf6307a4b8d92017d))
+
 ## 1.0.0 (2026-04-12)
 
 ### Features
