@@ -7,3 +7,6 @@ dist
 .env.local
 .playwright-mcp
 .DS_Store
+.claude
+agent
+apps/docs/design
