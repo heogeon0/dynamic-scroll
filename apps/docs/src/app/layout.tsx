@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { JetBrains_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { ContactPopover } from "@/components/layout/ContactPopover";
 import "./globals.css";
 
 const jetbrainsMono = JetBrains_Mono({
@@ -54,9 +55,6 @@ export default function RootLayout({
                 dynamic scroll
               </span>
               <nav className="flex items-center gap-6 text-sm text-muted-foreground">
-                <a href="#how-it-works" className="hover:text-foreground transition-colors">
-                  Docs
-                </a>
                 <a
                   href="https://github.com/heogeon0/dynamic-scroll"
                   target="_blank"
@@ -65,6 +63,7 @@ export default function RootLayout({
                 >
                   Github
                 </a>
+                <ContactPopover />
               </nav>
             </div>
           </header>
@@ -72,6 +71,35 @@ export default function RootLayout({
           <main className="flex-1">
             <div className="max-w-6xl mx-auto px-6 py-16">{children}</div>
           </main>
+
+          <footer id="contact" className="border-t">
+            <div className="max-w-6xl mx-auto px-6 py-12 space-y-2">
+              <p className="text-base font-semibold">허건녕</p>
+              <p className="text-base text-muted-foreground">Frontend Developer</p>
+              <div className="space-y-1 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-foreground w-12">Github</span>
+                  <a
+                    href="https://github.com/heogeon0"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    heogeon0
+                  </a>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-foreground w-12">Email</span>
+                  <a
+                    href="mailto:heo3793@naver.com"
+                    className="hover:text-foreground transition-colors"
+                  >
+                    heo3793@naver.com
+                  </a>
+                </div>
+              </div>
+            </div>
+          </footer>
         </TooltipProvider>
       </body>
     </html>

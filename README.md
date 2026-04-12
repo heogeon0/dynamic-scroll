@@ -1,144 +1,86 @@
-# @dynamic-scroll/core
+# DynamicScroll
 
-**Pixel-perfect virtual scrolling with pre-render measurement.**
+**사전 렌더링 기반 채팅앱 최적화 가상 스크롤 라이브러리**
 
-A headless React virtual scroll library that measures every item's real height before rendering — no estimated sizes, no scrollbar jumps, no position inaccuracy.
+> [Documentation & Demo](<!-- DOCS_URL -->)
 
-## Why
+메신저 서비스를 개발하면서, 각 요소의 높이를 알 수 없는 상황에서도 사용할 수 있는 가상 스크롤 라이브러리입니다.
 
-Most virtual scroll libraries (react-virtuoso, @tanstack/virtual, etc.) rely on `estimatedItemSize` to calculate positions before items are rendered. This causes:
+기존 가상 스크롤 라이브러리는 요소의 높이를 추정한 뒤 렌더링 후 보정하는 방식으로, 스크롤 점프와 레이아웃 시프트가 불가피했습니다.
+**사전 렌더링**을 통해 요소의 높이를 먼저 측정하여 이 문제를 해결하고, 이를 바탕으로 무한 스크롤과 채팅 기능을 구현했습니다.
 
-- **Scrollbar jumping** — the scrollbar resizes as estimated heights are corrected
-- **Inaccurate `scrollToItem`** — positions are wrong until items are actually rendered
-- **Layout shifts** — visible items jump as heights are recalculated
+## 핵심 기능
 
-**dynamic-scroll** takes a different approach: it renders every item in a hidden area first, measures the real DOM height, and only then starts the virtual scroll. The result is `childPositions` that are accurate from the very first frame.
+| 기능 | 설명 |
+|------|------|
+| **사전 렌더링 기반 가상 스크롤** | 숨겨진 영역에서 실제 DOM 높이를 먼저 측정하여 스크롤 점프와 레이아웃 시프트를 원천 차단 |
+| **이진 탐색 O(log n)** | 정렬된 누적합 배열에서 이진 탐색으로 화면에 보여줄 첫 번째 아이템을 빠르게 탐색 |
+| **Height Locking** | 사전 측정된 높이를 인라인 스타일로 잠궈 이미지 로드 시 깜빡임 방지 |
+| **Sticky Group Header** | Slack 코드 분석에서 발견한 GroupWrapper + Separator 이중 구조로 가상 스크롤에서 떠다니는 날짜 라벨 구현 |
+| **양방향 무한 스크롤** | guard ref 패턴으로 위/아래 데이터 로드 시 스크롤 위치 정확하게 보존 |
+| **스크롤 API 큐잉** | 측정 중 호출된 scrollToItem/scrollToBottom을 저장해두었다가 측정 완료 후 자동 실행 |
+| **Headless** | 스타일링 없이 가상화 엔진 + 스크롤 제어 API만 제공 |
 
-## Design Challenges
+## 아키텍처
 
-Building a production-grade virtual scroll means solving problems that don't appear in simple demos. Here are the core challenges and how we solved them:
+```
+DynamicScroll (orchestrator)
+│
+├─ Phase 1: Measure
+│  InitialMeasure (visibility: hidden)
+│  → useRef<Map> heightMap (측정 중 리렌더 0회)
+│  → img.onload 대기 + 5초 타임아웃 fallback
+│
+├─ Phase 2: Compute
+│  childPositions = 누적합 (prefix sum)
+│  totalHeight = positions[last]
+│
+└─ Phase 3: Render (VirtualScroll)
+   scrollTop → 이진 탐색 O(log n)
+   → startNode / endNode 결정
+   → Measure (ResizeObserver + Height Locking)
+   → GroupWrapper + Separator (Sticky Header)
+```
 
-### 1. Accurate positioning without knowing heights
-
-**Problem:** Items have dynamic heights (text wraps, images load, content varies). You can't calculate positions without knowing heights, but you can't know heights without rendering.
-
-**Solution:** Pre-render Measurement. Every item is rendered in a hidden container (`visibility: hidden`) and measured with `offsetHeight`. An `isAllMeasured` gate ensures the virtual scroll only starts after all heights are known. For images, we wait for `img.onload` with a timeout fallback.
-
-### 2. Scroll jump on prepend
-
-**Problem:** When loading older messages at the top (bidirectional infinite scroll), new content pushes existing content down. The user sees a jarring jump.
-
-**Solution:** Before prepending, save `scrollHeight`. After the DOM updates, set `scrollTop = newScrollHeight - savedScrollHeight`. This keeps the viewport exactly where it was.
-
-### 3. Sticky headers in virtual scroll
-
-**Problem:** CSS `position: sticky` doesn't work with absolutely positioned items (which virtual scroll requires). But sticky group headers (dates, categories) are essential UX.
-
-**Solution:** A dual-header system. A `position: sticky` header sits at the top of the scroll container. Its `height` is limited to `totalHeight - cumulativeGroupHeight`, so it naturally gets pushed up when the next group's content begins — creating a smooth push-up transition effect.
-
-### 4. Stick-to-bottom vs. "don't move while I'm reading"
-
-**Problem:** Chat-like UIs need to auto-scroll to the bottom when new items arrive, but only if the user is already at the bottom. If they're scrolled up reading old content, the scroll should not move.
-
-**Solution:** Track `isAtBottom` via a ref (not state, to avoid stale closures). On `totalHeight` change, only auto-scroll if `isAtBottom` is true. Height changes (image loads) are handled separately from item count changes.
-
-### 5. Scroll-render synchronization
-
-**Problem:** React batches state updates, but scroll position must be reflected immediately. Without sync updates, you see blank areas as the user scrolls faster than React can render.
-
-**Solution:** `requestAnimationFrame` throttling by default for smooth performance. Optional `syncScrollUpdates` prop enables `flushSync` for latency-critical use cases (trading framerate for fewer blank frames).
-
-### 6. Managing heights for thousands of items
-
-**Problem:** The original implementation used `{...prev, [id]: height}` (object spread) for height updates. With N items, each measurement triggers O(N) copy + a React re-render — that's N re-renders during initial measurement.
-
-**Solution:** `useRef<Map<string, number>>` for O(1) get/set with zero re-renders during measurement. Only one state update fires after all items are measured. ResizeObserver changes are batched via `requestAnimationFrame`.
-
-## Features
-
-- **Pre-render measurement** — accurate heights before virtual scroll starts
-- **Dynamic heights** — items can be any height, including images
-- **Bidirectional infinite scroll** — load data at top and bottom with scroll position preservation
-- **Sticky group headers** — groupBy + renderGroupHeader with push-up transition
-- **scrollToItem** — scroll to any item with `start`, `center`, `end` alignment
-- **Stick-to-bottom** — auto-scroll on new items when already at bottom
-- **Headless** — zero styling, bring your own CSS/components
-- **TypeScript** — full type safety with generics
-- **Imperative API** — `scrollToItem`, `scrollToBottom`, `scrollToOffset`, `getScrollOffset`
-
-## Quick Start
+## 설치
 
 ```bash
 npm install @dynamic-scroll/core
 ```
 
+## 사용법
+
 ```tsx
 import { DynamicScroll } from "@dynamic-scroll/core";
-
-interface Item {
-  id: string;
-  content: string;
-}
-
-const items: Item[] = Array.from({ length: 10000 }, (_, i) => ({
-  id: `item-${i}`,
-  content: `Item ${i} with variable content...`,
-}));
 
 function App() {
   return (
     <DynamicScroll
       items={items}
-      renderItem={(item) => (
-        <div style={{ padding: 16 }}>{item.content}</div>
-      )}
+      renderItem={(item) => <div>{item.content}</div>}
       style={{ height: 600 }}
     />
   );
 }
 ```
 
-## Architecture
+## 비교
 
-```
-┌─────────────────────────────────────────────┐
-│  DynamicScroll (orchestrator)               │
-│                                             │
-│  ┌───────────────────────────────────────┐  │
-│  │ Phase 1: Measure                      │  │
-│  │ InitialMeasure (hidden DOM)           │  │
-│  │ → useRef<Map> heightMap (no rerenders)│  │
-│  │ → isAllMeasured gate                  │  │
-│  └──────────────┬────────────────────────┘  │
-│                 │ all measured               │
-│  ┌──────────────▼────────────────────────┐  │
-│  │ Phase 2: Compute                      │  │
-│  │ childPositions = cumulative sum       │  │
-│  │ totalHeight = positions[last]         │  │
-│  └──────────────┬────────────────────────┘  │
-│                 │                            │
-│  ┌──────────────▼────────────────────────┐  │
-│  │ Phase 3: Render (VirtualScroll)       │  │
-│  │ scrollTop → useScrollState            │  │
-│  │ → binary search O(log n)              │  │
-│  │ → startNode / endNode                 │  │
-│  │ → Measure wraps each visible item     │  │
-│  │ → ResizeObserver → batch update       │  │
-│  └───────────────────────────────────────┘  │
-└─────────────────────────────────────────────┘
-```
+| 특성 | dynamic-scroll | react-virtuoso | @tanstack/virtual |
+|------|---------------|----------------|-------------------|
+| 높이 측정 | 사전 렌더링 (정확) | 추정 후 보정 | 추정 후 보정 |
+| 스크롤바 정확도 | 처음부터 정확 | 보정 중 점프 | 보정 중 점프 |
+| scrollToItem | 정확 | 측정 전 부정확 | 측정 전 부정확 |
+| 양방향 무한 스크롤 | 내장 | 내장 | 수동 구현 |
+| Sticky Group Header | 내장 (push-up) | 내장 | 수동 구현 |
+| Headless | Yes | No | Yes |
 
-## Comparison
+## 기술 스택
 
-| Feature | dynamic-scroll | react-virtuoso | @tanstack/virtual |
-|---------|---------------|----------------|-------------------|
-| Height measurement | Pre-render (exact) | Estimated + correct | Estimated + correct |
-| Scrollbar accuracy | Pixel-perfect from start | Jumps during correction | Jumps during correction |
-| scrollToItem accuracy | Exact | Approximate until measured | Approximate until measured |
-| Bidirectional infinite scroll | Built-in | Built-in | Manual |
-| Sticky group headers | Built-in (push-up) | Built-in | Manual |
-| Headless | Yes | No (styled) | Yes |
-| Bundle size | ~5KB | ~30KB | ~10KB |
+- React 19
+- TypeScript
+- Turborepo (monorepo)
+- Next.js (docs)
 
 ## License
 
