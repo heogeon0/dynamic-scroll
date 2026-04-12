@@ -10,6 +10,10 @@ export default {
       "@semantic-release/commit-analyzer",
       {
         preset: "conventionalcommits",
+        parserOpts: {
+          headerPattern: /^(?:.*\s)?(\w+)(?:\(([^)]*)\))?!?:\s(.*)$/,
+          headerCorrespondence: ["type", "scope", "subject"],
+        },
         releaseRules: [
           { type: "feat", scope: "core", release: "minor" },
           { type: "fix", scope: "core", release: "patch" },
@@ -26,6 +30,10 @@ export default {
       "@semantic-release/release-notes-generator",
       {
         preset: "conventionalcommits",
+        parserOpts: {
+          headerPattern: /^(?:.*\s)?(\w+)(?:\(([^)]*)\))?!?:\s(.*)$/,
+          headerCorrespondence: ["type", "scope", "subject"],
+        },
         presetConfig: {
           types: [
             { type: "feat", section: "Features" },
