@@ -1,5 +1,8 @@
 {
   "name": "@dynamic-scroll/core",
+  "publishConfig": {
+    "access": "public"
+  },
   "version": "1.2.0",
   "description": "Headless virtual scroll library with pre-render measurement for pixel-perfect accuracy",
   "main": "./dist/index.cjs",
