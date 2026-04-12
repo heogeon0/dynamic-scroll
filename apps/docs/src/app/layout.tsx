@@ -9,8 +9,25 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "dynamic-scroll",
-  description: "Pre-render measurement based virtual scroll library",
+  title: "DynamicScroll — 사전 렌더링 기반 채팅앱 최적화 가상 스크롤",
+  description:
+    "메신저 서비스에서 각 요소의 높이를 알 수 없는 상황에서도 reflow 없이 정확한 레이아웃을 보장하는 가상 스크롤 라이브러리. 사전 렌더링, 이진 탐색, Sticky Group Header, 양방향 무한 스크롤을 지원합니다.",
+  keywords: [
+    "virtual scroll",
+    "가상 스크롤",
+    "채팅",
+    "사전 렌더링",
+    "dynamic height",
+    "React",
+    "무한 스크롤",
+    "sticky header",
+  ],
+  openGraph: {
+    title: "DynamicScroll — 사전 렌더링 기반 채팅앱 최적화 가상 스크롤",
+    description:
+      "사전 렌더링으로 높이를 먼저 측정하여 스크롤 점프와 레이아웃 시프트를 해결한 가상 스크롤 라이브러리",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
