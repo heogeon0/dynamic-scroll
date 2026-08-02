@@ -1,4 +1,5 @@
 import { memo, useEffect, useRef, useState } from "react";
+import { debugLog } from "../debug";
 
 interface MeasureProps {
   children: React.ReactNode;
@@ -43,7 +44,7 @@ function MeasureInner({
       if (newHeight === 0 || prevHeightRef.current === newHeight) return;
       const oldHeight = prevHeightRef.current;
       prevHeightRef.current = newHeight;
-      console.log(`[Measure] ${itemId} height changed: ${oldHeight} → ${newHeight} (locked: ${heightLocked}, knownHeight: ${knownHeight})`);
+      debugLog(`[Measure] ${itemId} height changed: ${oldHeight} → ${newHeight} (locked: ${heightLocked}, knownHeight: ${knownHeight})`);
       onHeightChange(itemId, newHeight);
     };
 
@@ -62,7 +63,7 @@ function MeasureInner({
     if (!node) return;
 
     const mutationObserver = new MutationObserver(() => {
-      console.log(`[Measure] ${itemId} mutation detected → unlocking height (was ${knownHeight}px)`);
+      debugLog(`[Measure] ${itemId} mutation detected → unlocking height (was ${knownHeight}px)`);
       setHeightLocked(false);
     });
 

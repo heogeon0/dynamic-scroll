@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { debugLog, isDebugEnabled } from "../debug";
 
 interface InitialMeasureProps {
   children: React.ReactNode;
@@ -29,14 +30,20 @@ export function InitialMeasure({
       if (reportedRef.current) return;
       reportedRef.current = true;
       const height = Math.ceil(node.offsetHeight);
-      const images = node.querySelectorAll("img");
-      const imgInfo = Array.from(images).map((img) => ({
-        complete: img.complete,
-        naturalHeight: img.naturalHeight,
-        offsetHeight: img.offsetHeight,
-        src: img.src.slice(-40),
-      }));
-      console.log(`[InitialMeasure] ${itemId} → ${height}px (${reason})`, imgInfo.length > 0 ? imgInfo : "no images");
+      // 아래 imgInfo 는 **로그에만** 쓰인다. 가드 밖에 두면 측정하는 아이템마다
+      // img 를 전부 훑게 되는데, 채팅처럼 항목이 많으면 그 비용이 그대로 쌓인다.
+      if (isDebugEnabled()) {
+        const imgInfo = Array.from(node.querySelectorAll("img")).map((img) => ({
+          complete: img.complete,
+          naturalHeight: img.naturalHeight,
+          offsetHeight: img.offsetHeight,
+          src: img.src.slice(-40),
+        }));
+        debugLog(
+          `[InitialMeasure] ${itemId} → ${height}px (${reason})`,
+          imgInfo.length > 0 ? imgInfo : "no images",
+        );
+      }
       onMeasured(itemId, Math.max(height, 1));
     };
 
@@ -52,7 +59,7 @@ export function InitialMeasure({
       return;
     }
 
-    console.log(`[InitialMeasure] ${itemId} waiting for ${pending.length} image(s)`);
+    debugLog(`[InitialMeasure] ${itemId} waiting for ${pending.length} image(s)`);
 
     let remaining = pending.length;
     const onSettled = () => {

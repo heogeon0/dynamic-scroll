@@ -28,3 +28,6 @@ export type {
   DynamicScrollProps,
   VirtualScrollProps,
 } from "./types";
+
+// 디버그 로그 스위치 — 기본은 꺼짐. 라이브러리가 남의 콘솔을 더럽히지 않는다.
+export { setDebug } from "./debug";

@@ -18,6 +18,7 @@ import type {
 } from "../types";
 import { useScrollState } from "../hooks/useScrollState";
 import { Measure } from "./Measure";
+import { debugLog } from "../debug";
 
 const DEFAULT_OVERSCAN = 8;
 
@@ -190,7 +191,7 @@ function VirtualScrollInner<T extends VirtualScrollItem>(
       }
       const maxScrollTop = el.scrollHeight - el.clientHeight;
       const finalTarget = Math.max(0, Math.min(target, maxScrollTop));
-      console.log('[scrollToItem]', {
+      debugLog('[scrollToItem]', {
         index,
         align,
         itemId: items[index].id,
@@ -243,7 +244,7 @@ function VirtualScrollInner<T extends VirtualScrollItem>(
     // backward(prepend): 측정 완료 후 scrollTop 보정으로 위치 보존
     if (prevScrollHeightRef.current > 0 && !isMeasuring) {
       const diff = el.scrollHeight - prevScrollHeightRef.current;
-      console.log('[totalHeight] backward adjust', { diff, prevScrollHeight: prevScrollHeightRef.current, newScrollHeight: el.scrollHeight });
+      debugLog('[totalHeight] backward adjust', { diff, prevScrollHeight: prevScrollHeightRef.current, newScrollHeight: el.scrollHeight });
       if (diff > 0) {
         el.scrollTop += diff;
         setScrollTop(el.scrollTop);
@@ -263,7 +264,7 @@ function VirtualScrollInner<T extends VirtualScrollItem>(
 
     // stick-to-bottom: 하단에 있으면 하단 유지 (이미지 로드, 새 메시지 등)
     if (isAtBottomRef.current && !isMeasuring) {
-      console.log('[totalHeight] stick-to-bottom', { scrollHeight: el.scrollHeight });
+      debugLog('[totalHeight] stick-to-bottom', { scrollHeight: el.scrollHeight });
       el.scrollTop = el.scrollHeight;
     }
   }, [totalHeight, isMeasuring]);
@@ -287,7 +288,7 @@ function VirtualScrollInner<T extends VirtualScrollItem>(
       !backwardLoadingRef.current &&
       prevScrollHeightRef.current === 0
     ) {
-      console.log('[reach] START reached', { actualScrollTop, threshold, scrollHeight: el.scrollHeight, hasCallback: !!onStartReached });
+      debugLog('[reach] START reached', { actualScrollTop, threshold, scrollHeight: el.scrollHeight, hasCallback: !!onStartReached });
       backwardLoadingRef.current = true;
       prevScrollHeightRef.current = el.scrollHeight;
       Promise.resolve(onStartReached()).catch(() => {
@@ -304,7 +305,7 @@ function VirtualScrollInner<T extends VirtualScrollItem>(
       onEndReached &&
       !forwardLoadingRef.current
     ) {
-      console.log('[reach] END reached', { distFromBottom, threshold, actualScrollTop, scrollHeight: el.scrollHeight, clientHeight: el.clientHeight });
+      debugLog('[reach] END reached', { distFromBottom, threshold, actualScrollTop, scrollHeight: el.scrollHeight, clientHeight: el.clientHeight });
       forwardLoadingRef.current = true;
       Promise.resolve(onEndReached()).catch(() => {
         forwardLoadingRef.current = false;
