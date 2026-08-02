@@ -55,6 +55,7 @@ function DynamicScrollInner<T extends VirtualScrollItem>(
     initialScrollPosition = "bottom",
     onMeasurementComplete,
     initialLoadingComponent,
+    measureChunkSize,
   }: DynamicScrollProps<T>,
   ref: React.ForwardedRef<DynamicScrollHandle>,
 ) {
@@ -113,7 +114,7 @@ function DynamicScrollInner<T extends VirtualScrollItem>(
     onItemMeasured,
     onHeightChange,
     version,
-  } = useHeightMap({ items: allItems, estimatedItemSize });
+  } = useHeightMap({ items: allItems, estimatedItemSize, measureChunkSize });
 
   // 초기 측정 완료 여부를 한 번만 추적
   const hasEverMeasuredRef = useRef(false);

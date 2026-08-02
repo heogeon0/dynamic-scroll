@@ -94,6 +94,13 @@ export interface DynamicScrollProps<T extends VirtualScrollItem> {
   initialScrollPosition?: InitialScrollPosition;
   /** 새 아이템의 높이 측정이 완료되었을 때 호출되는 콜백. 리마운트 없이 scrollToItem 등을 안전하게 호출할 수 있는 시점. */
   onMeasurementComplete?: () => void;
+  /**
+   * 한 번에 숨겨서 잴 아이템 수. 기본 200.
+   * 사전 측정은 안 잰 아이템을 실제로 그려야 하므로, 전부 한 번에 그리면
+   * 수만 건에서 브라우저가 잠긴다. 나눠 재면 느릴 뿐 멈추지는 않는다.
+   * 항목이 가볍고 수가 적다면 키워도 된다.
+   */
+  measureChunkSize?: number;
   /** 초기 높이 측정 중 표시할 로딩 컴포넌트 */
   initialLoadingComponent?: ReactNode;
 }
