@@ -22,6 +22,7 @@ import { usePositions } from "./hooks/usePositions";
 import { useGroupPositions } from "./hooks/useGroupPositions";
 import { VirtualScroll } from "./components/VirtualScroll";
 import { InitialMeasure } from "./components/InitialMeasure";
+import { debugLog } from "./debug";
 
 /**
  * DynamicScroll - 최상위 가상 스크롤 컴포넌트.
@@ -54,6 +55,7 @@ function DynamicScrollInner<T extends VirtualScrollItem>(
     initialScrollPosition = "bottom",
     onMeasurementComplete,
     initialLoadingComponent,
+    measureChunkSize,
   }: DynamicScrollProps<T>,
   ref: React.ForwardedRef<DynamicScrollHandle>,
 ) {
@@ -96,6 +98,15 @@ function DynamicScrollInner<T extends VirtualScrollItem>(
   // separator 포함된 아이템 목록으로 높이 측정
   const allItems = itemsWithSeparators as T[];
 
+  // id 로 인덱스를 찾는 지도. 아래 측정 렌더에서 unmeasuredIds 를 돌며 findIndex 를
+  // 쓰면 **O(n²)** 가 된다 — 항목이 많을수록(채팅은 많다) 그대로 멈춤으로 이어진다.
+  // 실측 2026-08-02: 5만 건을 한 번에 넘겼을 때 브라우저가 응답하지 않았다.
+  const indexById = useMemo(() => {
+    const map = new Map<string, number>();
+    for (let i = 0; i < allItems.length; i++) map.set(allItems[i].id, i);
+    return map;
+  }, [allItems]);
+
   const {
     heightMapRef,
     isAllMeasured,
@@ -103,13 +114,13 @@ function DynamicScrollInner<T extends VirtualScrollItem>(
     onItemMeasured,
     onHeightChange,
     version,
-  } = useHeightMap({ items: allItems, estimatedItemSize });
+  } = useHeightMap({ items: allItems, estimatedItemSize, measureChunkSize });
 
   // 초기 측정 완료 여부를 한 번만 추적
   const hasEverMeasuredRef = useRef(false);
   if (isAllMeasured && !hasEverMeasuredRef.current) {
     hasEverMeasuredRef.current = true;
-    console.log('[DynamicScroll] initial measurement complete', { itemCount: allItems.length, unmeasuredCount: unmeasuredIds.length });
+    debugLog('[DynamicScroll] initial measurement complete', { itemCount: allItems.length, unmeasuredCount: unmeasuredIds.length });
   }
 
   // 현재 측정 중인지 (초기 이후 새 아이템 추가 시)
@@ -125,10 +136,10 @@ function DynamicScrollInner<T extends VirtualScrollItem>(
   useEffect(() => {
     if (isMeasuring) {
       wasMeasuringRef.current = true;
-      console.log('[DynamicScroll] measuring started', { unmeasuredCount: unmeasuredIds.length, totalItems: allItems.length });
+      debugLog('[DynamicScroll] measuring started', { unmeasuredCount: unmeasuredIds.length, totalItems: allItems.length });
     } else if (wasMeasuringRef.current) {
       wasMeasuringRef.current = false;
-      console.log('[DynamicScroll] measuring complete', { hasPendingScroll: !!pendingScrollRef.current });
+      debugLog('[DynamicScroll] measuring complete', { hasPendingScroll: !!pendingScrollRef.current });
       if (pendingScrollRef.current) {
         pendingScrollRef.current();
         pendingScrollRef.current = null;
@@ -163,12 +174,12 @@ function DynamicScrollInner<T extends VirtualScrollItem>(
   useImperativeHandle(ref, () => ({
     scrollToItem: (index, align) => {
       const internalIdx = toInternalIndex(index);
-      console.log('[DynamicScroll.scrollToItem]', { externalIndex: index, internalIndex: internalIdx, align, isMeasuring: isMeasuringRef.current });
+      debugLog('[DynamicScroll.scrollToItem]', { externalIndex: index, internalIndex: internalIdx, align, isMeasuring: isMeasuringRef.current });
       const action = () => innerRef.current?.scrollToItem(internalIdx, align);
       isMeasuringRef.current ? (pendingScrollRef.current = action) : action();
     },
     scrollToBottom: (behavior) => {
-      console.log('[DynamicScroll.scrollToBottom]', { behavior, isMeasuring: isMeasuringRef.current, queued: isMeasuringRef.current });
+      debugLog('[DynamicScroll.scrollToBottom]', { behavior, isMeasuring: isMeasuringRef.current, queued: isMeasuringRef.current });
       const action = () => innerRef.current?.scrollToBottom(behavior);
       isMeasuringRef.current ? (pendingScrollRef.current = action) : action();
     },
@@ -240,7 +251,7 @@ function DynamicScrollInner<T extends VirtualScrollItem>(
       >
         {initialLoadingComponent}
         {unmeasuredIds.map((id) => {
-          const index = allItems.findIndex((item) => item.id === id);
+          const index = indexById.get(id) ?? -1;
           if (index === -1) return null;
           return (
             <InitialMeasure key={id} itemId={id} onMeasured={onItemMeasured}>
@@ -269,7 +280,7 @@ function DynamicScrollInner<T extends VirtualScrollItem>(
           }}
         >
           {unmeasuredIds.map((id) => {
-            const index = allItems.findIndex((item) => item.id === id);
+            const index = indexById.get(id) ?? -1;
             if (index === -1) return null;
             return (
               <InitialMeasure key={id} itemId={id} onMeasured={onItemMeasured}>
